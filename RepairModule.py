@@ -4,243 +4,244 @@ import tkinter as tk
 from tkinter import *
 import openpyxl
 
-w = 0
-s = 0
-total_price = 0
+def runRepairApp():
+    w = 0
+    s = 0
+    total_price = 0
 
-#Inventory
+    #Inventory
 
-#Check Inventory Stock
-def check_inv():
-    def update_stock_levels(filename):
-        n = 0
-        int_dis.delete("1.0", tk.END)
+    #Check Inventory Stock
+    def check_inv():
+        def update_stock_levels(filename):
+            n = 0
+            int_dis.delete("1.0", tk.END)
+            try:
+                wb = openpyxl.load_workbook(filename)
+                sheet = wb.active
+
+                headers = {cell.value.lower(): cell.column for cell in sheet[1]}
+
+                if 'parts' not in headers or 'stock' not in headers:
+                    int_dis.insert(tk.INSERT,"Error: Could not find 'parts' or 'stock' columns.")
+                    return
+
+                parts_col = headers['parts']
+                stock_col = headers['stock']
+
+                for row in range(2, sheet.max_row + 1):
+                    stock_cell = sheet.cell(row=row, column=stock_col)
+
+                    if stock_cell.value is not None and isinstance(stock_cell.value, (int, float)):
+                        if stock_cell.value < 10:
+                            stock_cell.value = 30
+                            part_name = sheet.cell(row=row, column=parts_col).value
+                            n += 1
+                            ck = True
+
+                        else:
+                            ck = False
+
+                if ck:
+                    int_dis.insert(tk.INSERT,f"Updated inventory. {n} parts restocked.")
+                    wb.save(filename)
+                    int_dis.insert(tk.INSERT, f"\nSuccessfully updated and saved {filename}")
+                elif not ck:
+                    int_dis.insert(tk.INSERT,"Stock is up to date")
+
+            except FileNotFoundError:
+                int_dis.insert(tk.INSERT,f"Error: The file '{filename}' was not found.")
+            except Exception as e:
+                int_dis.insert(tk.INSERT,f"An error occurred: {e}")
+
+        update_stock_levels('stock.xlsx')
+
+    #Parts Cost
+    def process_stock(filename):
+        global total_price
         try:
             wb = openpyxl.load_workbook(filename)
             sheet = wb.active
 
-            headers = {cell.value.lower(): cell.column for cell in sheet[1]}
 
-            if 'parts' not in headers or 'stock' not in headers:
-                int_dis.insert(tk.INSERT,"Error: Could not find 'parts' or 'stock' columns.")
+                # 2. Get all data rows (excluding the header at row 1)
+                # We use range starting from 2 to the max row
+            max_row = sheet.max_row
+            if max_row < 6:
+                inv_dis.insert(tk.INSERT,"\nNot enough items in the sheet to pick 5.")
                 return
 
-            parts_col = headers['parts']
-            stock_col = headers['stock']
+                # Pick 5 unique random row indices
+            random_indices = random.sample(range(2, max_row + 1), 5)
 
-            for row in range(2, sheet.max_row + 1):
-                stock_cell = sheet.cell(row=row, column=stock_col)
+            inv_dis.insert(tk.INSERT,"\nItems selected:")
 
-                if stock_cell.value is not None and isinstance(stock_cell.value, (int, float)):
-                    if stock_cell.value < 10:
-                        stock_cell.value = 30
-                        part_name = sheet.cell(row=row, column=parts_col).value
-                        n += 1
-                        ck = True
+                # 3. Process the selected rows
+            for row_idx in random_indices:
+                part_name = sheet.cell(row=row_idx, column=1).value
+                current_stock = sheet.cell(row=row_idx, column=2).value
+                price = sheet.cell(row=row_idx, column=3).value
 
-                    else:
-                        ck = False
+                    # Update the stock (minus 1)
+                    # Note: In a real scenario, you might want to check if stock > 0 first
+                sheet.cell(row=row_idx, column=2).value = current_stock - 1
 
-            if ck:
-                int_dis.insert(tk.INSERT,f"Updated inventory. {n} parts restocked.")
-                wb.save(filename)
-                int_dis.insert(tk.INSERT, f"\nSuccessfully updated and saved {filename}")
-            elif not ck:
-                int_dis.insert(tk.INSERT,"Stock is up to date")
+                    # Add to total
+                total_price += price
+
+                inv_dis.insert(tk.INSERT,f"\n- {part_name}: ${price} (New Stock: {current_stock - 1})")
+
+                # 4. Save the changes back to the file
+            wb.save(filename)
+
+            inv_dis.insert(tk.INSERT, f"\nTotal Price for selection: ${total_price:.2f}")
+            inv_dis.insert(tk.INSERT,f"\nChanges saved to {filename}")
+
 
         except FileNotFoundError:
-            int_dis.insert(tk.INSERT,f"Error: The file '{filename}' was not found.")
-        except Exception as e:
-            int_dis.insert(tk.INSERT,f"An error occurred: {e}")
-
-    update_stock_levels('stock.xlsx')
-
-#Parts Cost
-def process_stock(filename):
-    global total_price
-    try:
-        wb = openpyxl.load_workbook(filename)
-        sheet = wb.active
-
-
-            # 2. Get all data rows (excluding the header at row 1)
-            # We use range starting from 2 to the max row
-        max_row = sheet.max_row
-        if max_row < 6:
-            inv_dis.insert(tk.INSERT,"\nNot enough items in the sheet to pick 5.")
+            inv_dis.insert(tk.INSERT,f"\nError: The file '{filename}' was not found.")
             return
 
-            # Pick 5 unique random row indices
-        random_indices = random.sample(range(2, max_row + 1), 5)
+    #Invoice Class
 
-        inv_dis.insert(tk.INSERT,"\nItems selected:")
+    class Invoice:
+        def __init__(self, inv_id = 0, name = "", dob = "", phone = "", email = "", card_name = "", card_number = "", card_expiration = "", card_ccv = "", car_make = "", car_model = "", car_year = "", car_color = "", issue = "", diag_or_repair = "", est_labor = 0):
+            self.inv_id = inv_id
+            self.name = name
+            self.dob = dob
+            self.phone = phone
+            self.email = email
+            self.card_name = card_name
+            self.card_number = card_number
+            self.card_expiration = card_expiration
+            self.card_ccv = card_ccv
+            self.car_make = car_make
+            self.car_model = car_model
+            self.car_year = car_year
+            self.car_color = car_color
+            self.issue = issue
+            self.diag_or_repair = diag_or_repair
+            self.est_labor_hrs = est_labor
+            self.hrs_per_day = 8
+            self.per_hour_pay = 25
+            self.total_labor_cost = 0.0
+            self.parts_needed = {}
+            self.parts_cost = 0.0
+            self.total_cost = 0.0
+            self.eta_days = 0
 
-            # 3. Process the selected rows
-        for row_idx in random_indices:
-            part_name = sheet.cell(row=row_idx, column=1).value
-            current_stock = sheet.cell(row=row_idx, column=2).value
-            price = sheet.cell(row=row_idx, column=3).value
+    #Create Invoice Calcs
+        def invoice_calc(self):
+            self.total_cost = self.labor_calc()
+            self.parts_cost = self.parts_calc()
+            self.total_cost = self.total_cost_calc()
+            self.eta_days = self.eta_calc()
 
-                # Update the stock (minus 1)
-                # Note: In a real scenario, you might want to check if stock > 0 first
-            sheet.cell(row=row_idx, column=2).value = current_stock - 1
+    #Calculate Labor Cost
+        def labor_calc(self):
+            total_labor_cost = self.per_hour_pay * self.est_labor_hrs
+            inv_dis.delete("1.0", tk.END)
+            return total_labor_cost
 
-                # Add to total
-            total_price += price
+    #Calculate Parts Cost
+        def parts_calc(self):
+            parts_cost = 0
+            for e in self.parts_needed:
+                parts_cost += e
+            return parts_cost
 
-            inv_dis.insert(tk.INSERT,f"\n- {part_name}: ${price} (New Stock: {current_stock - 1})")
+    #Calculate Total Cost
+        def total_cost_calc(self):
+            total_cost = self.parts_cost + self.total_labor_cost
+            return total_cost
 
-            # 4. Save the changes back to the file
-        wb.save(filename)
+    #Calculate ETA
+        def eta_calc(self):
+            eta = self.est_labor_hrs / self.hrs_per_day
+            return eta
 
-        inv_dis.insert(tk.INSERT, f"\nTotal Price for selection: ${total_price:.2f}")
-        inv_dis.insert(tk.INSERT,f"\nChanges saved to {filename}")
+    #Add Invoice to Wait List
+        def update_wait_list(self):
+            schedule.add_schedule(self.name, self.phone, self.email)
 
-
-    except FileNotFoundError:
-        inv_dis.insert(tk.INSERT,f"\nError: The file '{filename}' was not found.")
-        return
-
-#Invoice Class
-
-class Invoice:
-    def __init__(self, inv_id = 0, name = "", dob = "", phone = "", email = "", card_name = "", card_number = "", card_expiration = "", card_ccv = "", car_make = "", car_model = "", car_year = "", car_color = "", issue = "", diag_or_repair = "", est_labor = 0):
-        self.inv_id = inv_id
-        self.name = name
-        self.dob = dob
-        self.phone = phone
-        self.email = email
-        self.card_name = card_name
-        self.card_number = card_number
-        self.card_expiration = card_expiration
-        self.card_ccv = card_ccv
-        self.car_make = car_make
-        self.car_model = car_model
-        self.car_year = car_year
-        self.car_color = car_color
-        self.issue = issue
-        self.diag_or_repair = diag_or_repair
-        self.est_labor_hrs = est_labor
-        self.hrs_per_day = 8
-        self.per_hour_pay = 25
-        self.total_labor_cost = 0.0
-        self.parts_needed = {}
-        self.parts_cost = 0.0
-        self.total_cost = 0.0
-        self.eta_days = 0
-
-#Create Invoice Calcs
-    def invoice_calc(self):
-        self.total_cost = self.labor_calc()
-        self.parts_cost = self.parts_calc()
-        self.total_cost = self.total_cost_calc()
-        self.eta_days = self.eta_calc()
-
-#Calculate Labor Cost
-    def labor_calc(self):
-        total_labor_cost = self.per_hour_pay * self.est_labor_hrs
-        inv_dis.delete("1.0", tk.END)
-        return total_labor_cost
-
-#Calculate Parts Cost
-    def parts_calc(self):
-        parts_cost = 0
-        for e in self.parts_needed:
-            parts_cost += e
-        return parts_cost
-
-#Calculate Total Cost
-    def total_cost_calc(self):
-        total_cost = self.parts_cost + self.total_labor_cost
-        return total_cost
-
-#Calculate ETA
-    def eta_calc(self):
-        eta = self.est_labor_hrs / self.hrs_per_day
-        return eta
-
-#Add Invoice to Wait List
-    def update_wait_list(self):
-        schedule.add_schedule(self.name, self.phone, self.email)
-
-    def display_invoice(self):
-        inv_dis.insert(tk.INSERT,"\n--------------------------------------------")
-        inv_dis.insert(tk.INSERT, f"\nName: {self.name} \nDOB: {self.dob} \nPhone: {self.phone} \nEmail: {self.email} \nCard Name: {self.card_name} \nCard Number: {self.card_number} \nCard Expiry: {self.card_expiration} \nCard CVV: {self.card_ccv} \nCar Make: {self.car_make} \nCar Model: {self.car_model} \nCar Color: {self.car_color} \nCar Year: {self.car_year} \nIssue: {self.issue} \nDiag or Repair: {self.diag_or_repair} \nEstimated Labor Hours: {self.est_labor_hrs} \nTotal Parts Cost: ${total_price}")
-        inv_dis.insert(tk.INSERT,"\n--------------------------------------------")
+        def display_invoice(self):
+            inv_dis.insert(tk.INSERT,"\n--------------------------------------------")
+            inv_dis.insert(tk.INSERT, f"\nName: {self.name} \nDOB: {self.dob} \nPhone: {self.phone} \nEmail: {self.email} \nCard Name: {self.card_name} \nCard Number: {self.card_number} \nCard Expiry: {self.card_expiration} \nCard CVV: {self.card_ccv} \nCar Make: {self.car_make} \nCar Model: {self.car_model} \nCar Color: {self.car_color} \nCar Year: {self.car_year} \nIssue: {self.issue} \nDiag or Repair: {self.diag_or_repair} \nEstimated Labor Hours: {self.est_labor_hrs} \nTotal Parts Cost: ${total_price}")
+            inv_dis.insert(tk.INSERT,"\n--------------------------------------------")
 
 
 
-#Scheduling Class
+    #Scheduling Class
 
-class Scheduling:
-    def __init__(self):
-        self.sch_id = 0
-        self.name = ""
-        self.phone = ""
-        self.email = ""
-        self.wait_list = []
-        self.total_scheduled = 1
+    class Scheduling:
+        def __init__(self):
+            self.sch_id = 0
+            self.name = ""
+            self.phone = ""
+            self.email = ""
+            self.wait_list = []
+            self.total_scheduled = 1
 
-#Add to Schedule
-    def add_schedule(self, name, phone, email):
-        self.wait_list.append({"Name": name, "Phone": phone, "Email": email})
-        sch_dis.delete("1.0", tk.END)
-        sch_dis.insert(tk.INSERT,"Schedule Updated...")
-
-#Remove Cancelled Job From Schedule
-    def remove_schedule(self, x):
-        for n in self.wait_list:
-            if n["Name"] == x:
-                self.wait_list.pop(0)
-
-#Check Schedule
-    def check_schedule(self):
-        self.total_scheduled = len(self.wait_list)
-        if len(self.wait_list) > 0:
-            next_job = self.wait_list[0]
+    #Add to Schedule
+        def add_schedule(self, name, phone, email):
+            self.wait_list.append({"Name": name, "Phone": phone, "Email": email})
             sch_dis.delete("1.0", tk.END)
-            sch_dis.insert(tk.INSERT, "Next Job:\nName: " + next_job["Name"] + "\nPhone: " + next_job["Phone"] + "\nEmail: " + next_job["Email"] + "\n\nTotal Scheduled: " + str(self.total_scheduled))
+            sch_dis.insert(tk.INSERT,"Schedule Updated...")
 
-def create_invoice(entry1, entry2, entry3, entry4, entry5, entry6, entry7, entry8, entry9, entry10,
-                           entry11, entry12, entry13, entry14, entry15, entry16):
-    inv_id = entry1
-    name = entry2
-    dob = entry3
-    phone = entry4
-    email = entry5
-    card_number = entry6
-    card_name = entry7
-    card_expiration = entry8
-    card_ccv = entry9
-    car_make = entry10
-    car_model = entry11
-    car_year = entry12
-    car_color = entry13
-    issue = entry14
-    diag_or_repair = entry15
-    est_labor_hrs = int(entry16)
+    #Remove Cancelled Job From Schedule
+        def remove_schedule(self, x):
+            for n in self.wait_list:
+                if n["Name"] == x:
+                    self.wait_list.pop(0)
 
-    new_inv = Invoice(inv_id, name, dob, phone, email, card_name,
-                              card_number, card_expiration, card_ccv, car_make, car_model,
-                              car_year, car_color, issue, diag_or_repair, est_labor_hrs)
-    new_inv.invoice_calc()
-    invoices.append(new_inv)
+    #Check Schedule
+        def check_schedule(self):
+            self.total_scheduled = len(self.wait_list)
+            if len(self.wait_list) > 0:
+                next_job = self.wait_list[0]
+                sch_dis.delete("1.0", tk.END)
+                sch_dis.insert(tk.INSERT, "Next Job:\nName: " + next_job["Name"] + "\nPhone: " + next_job["Phone"] + "\nEmail: " + next_job["Email"] + "\n\nTotal Scheduled: " + str(self.total_scheduled))
 
-    inv_dis.insert(tk.INSERT, "Invoice Created")
+    def create_invoice(entry1, entry2, entry3, entry4, entry5, entry6, entry7, entry8, entry9, entry10,
+                               entry11, entry12, entry13, entry14, entry15, entry16):
+        inv_id = entry1
+        name = entry2
+        dob = entry3
+        phone = entry4
+        email = entry5
+        card_number = entry6
+        card_name = entry7
+        card_expiration = entry8
+        card_ccv = entry9
+        car_make = entry10
+        car_model = entry11
+        car_year = entry12
+        car_color = entry13
+        issue = entry14
+        diag_or_repair = entry15
+        est_labor_hrs = int(entry16)
 
-#SAVE FILES-------------------------------------------------------------------------------------------------------------
+        new_inv = Invoice(inv_id, name, dob, phone, email, card_name,
+                                  card_number, card_expiration, card_ccv, car_make, car_model,
+                                  car_year, car_color, issue, diag_or_repair, est_labor_hrs)
+        new_inv.invoice_calc()
+        invoices.append(new_inv)
 
-invent = Invoice(1,"2","3","4","5","6","7","8","9","10","11","12","13","14","15",16)
-invent2 = Invoice(2, "asfd", "fwqef", "afav", "afewf", "asf", "feff", "awfw", "wv", "wewe", "weff", "giige", "regnre", "sns", "afasdf", 24)
+        inv_dis.insert(tk.INSERT, "Invoice Created")
 
-schedule = Scheduling()
-invoices = [invent, invent2]
-schedules = [schedule]
+    #SAVE FILES-------------------------------------------------------------------------------------------------------------
 
-#schedule.wait_list.append({"Name": "Hagan", "Phone": "5013948846", "Email": "haganzgriffin@gmail.com"})
+    invent = Invoice(1,"2","3","4","5","6","7","8","9","10","11","12","13","14","15",16)
+    invent2 = Invoice(2, "asfd", "fwqef", "afav", "afewf", "asf", "feff", "awfw", "wv", "wewe", "weff", "giige", "regnre", "sns", "afasdf", 24)
 
-#MAIN MENU--------------------------------------------------------------------------------------------------------------
-def main():
+    schedule = Scheduling()
+    invoices = [invent, invent2]
+    schedules = [schedule]
+
+    #schedule.wait_list.append({"Name": "Hagan", "Phone": "5013948846", "Email": "haganzgriffin@gmail.com"})
+
+    #MAIN MENU--------------------------------------------------------------------------------------------------------------
+
     top = Tk()
     top.geometry("700x500")
 
@@ -681,7 +682,5 @@ def main():
     exi = Button(top, text="Exit", width=15, height=2, command=lambda: show("exit"))
     exi.place(x=270, y=405)
 
-    top.mainloop()
 
-if __name__ == '__main__':
-    main()
+    top.mainloop()
