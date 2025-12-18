@@ -142,10 +142,7 @@ def main():
             tree.delete(item)
         for car in cars:
             check = 'Y' if car.repBool else 'N'
-            tree.insert(
-                '', tk.END, text=car,
-                values=(car.make, car.model, car.year, car.color, f'${car.price:,.2f}', check)
-            )
+            tree.insert('', tk.END, text=car, values=(car.make, car.model, car.year, car.color, f'${car.price:,.2f}', check))
 
     def updateTab(event):
         selectedTab = notebook.select()
@@ -236,8 +233,7 @@ def main():
     repairCheckbox = tk.Checkbutton(AddFrame, text='Requires Repairs', variable=repairCheck)
 
     submitButton = tk.Button(AddFrame, text='Submit', command=submit)
-    loadDefaultsButton = tk.Button(AddFrame, text='Load Defaults: Debugging Only',
-                                   bg='lightgray', command=loadDefaults)
+    loadDefaultsButton = tk.Button(AddFrame, text='Load Defaults: Debugging Only', bg='lightgray', command=loadDefaults)
     loadDefaultsButton.grid(row=8, column=5, pady=10)
 
     makeLabel.grid(row=1, column=4)
@@ -282,13 +278,7 @@ def main():
     tk.Entry(SearchFrame, textvariable=colorSearch, width=10).grid(row=0, column=7)
 
     tk.Label(SearchFrame, text="Needs Repairs").grid(row=0, column=8)
-    ttk.Combobox(
-        SearchFrame,
-        textvariable=repairSearch,
-        values=["Any", "Yes", "No"],
-        width=8,
-        state="readonly"
-    ).grid(row=0, column=9)
+    ttk.Combobox(SearchFrame, textvariable=repairSearch, values=["Any", "Yes", "No"], width=8, state="readonly").grid(row=0, column=9)
 
     columns = ("Make", "Model", "Year", 'Color', 'Price', 'Needs Repairs')
     tree = ttk.Treeview(InventoryFrame, columns=columns, show="headings", selectmode="browse")
